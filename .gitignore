@@ -1,0 +1,16 @@
+__pycache__/
+node_modules/
+.env
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+postgres_data/
+pgadmin_data/
