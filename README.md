@@ -447,7 +447,3 @@ Pro/
 
 ---
 
-**Last Updated:** 2026-07-27
-**Version:** v2.0
-**Author:** CIS Community Summer Activity Team
-**Repository:** [ZeroToShip-Advanced](https://github.com/M-Affan01/ZeroToShip-Advanced)
