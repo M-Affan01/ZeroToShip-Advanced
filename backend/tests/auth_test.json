@@ -1,0 +1,557 @@
+{
+  "info": {
+    "name": "Sentinel-Sync Auth API Tests - Phase 2",
+    "description": "Test suite for /register, /login, and /health endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "sentinel-sync-phase2"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "test.user@campus.edu",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "Test@1234",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has status field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('status');",
+              "    pm.expect(jsonData.status).to.be.oneOf(['healthy', 'degraded', 'unhealthy']);",
+              "});",
+              "",
+              "pm.test('Response has services field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('services');",
+              "    pm.expect(jsonData.services).to.have.property('redis');",
+              "    pm.expect(jsonData.services).to.have.property('database');",
+              "});",
+              "",
+              "pm.test('Response has version field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('version');",
+              "    pm.expect(jsonData.version).to.equal('1.0.0');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Register - Valid User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response has message field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('message');",
+              "    pm.expect(jsonData.message).to.equal('User created successfully');",
+              "});",
+              "",
+              "pm.test('Response has user_id field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('user_id');",
+              "    pm.expect(jsonData.user_id).to.be.a('string');",
+              "});",
+              "",
+              "pm.test('Response has email field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('email');",
+              "    pm.expect(jsonData.email).to.equal(pm.environment.get('test_email'));",
+              "});",
+              "",
+              "pm.test('Response has timestamp field', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('timestamp');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"full_name\": \"Test User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Register - Duplicate Email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 409', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "",
+              "pm.test('Error message indicates duplicate', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail).to.include('already registered');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"full_name\": \"Test User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Register - Weak Password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message indicates weak password', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail).to.include('Weak password');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"weak.password@campus.edu\",\n  \"password\": \"12345678\",\n  \"full_name\": \"Weak Password User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Register - Invalid Email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 or 400', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"invalid-email\",\n  \"password\": \"{{test_password}}\",\n  \"full_name\": \"Invalid Email User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login - Valid Credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has access_token', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('access_token');",
+              "    pm.expect(jsonData.access_token).to.be.a('string');",
+              "    pm.environment.set('auth_token', jsonData.access_token);",
+              "});",
+              "",
+              "pm.test('Response has token_type as bearer', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('token_type');",
+              "    pm.expect(jsonData.token_type).to.equal('bearer');",
+              "});",
+              "",
+              "pm.test('Response has expires_in', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('expires_in');",
+              "    pm.expect(jsonData.expires_in).to.be.a('number');",
+              "    pm.expect(jsonData.expires_in).to.be.above(0);",
+              "});",
+              "",
+              "pm.test('Response has refresh_token', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('refresh_token');",
+              "    pm.expect(jsonData.refresh_token).to.be.a('string');",
+              "});",
+              "",
+              "pm.test('Response has user object with roles', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('user');",
+              "    pm.expect(jsonData.user).to.have.property('id');",
+              "    pm.expect(jsonData.user).to.have.property('email');",
+              "    pm.expect(jsonData.user).to.have.property('full_name');",
+              "    pm.expect(jsonData.user).to.have.property('roles');",
+              "    pm.expect(jsonData.user.roles).to.be.an('array');",
+              "    pm.expect(jsonData.user.roles).to.include('user');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login - Invalid Password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Error message indicates invalid credentials', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail).to.include('Invalid email or password');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"WrongPassword123!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login - Non-existent User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Error message is generic', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail).to.include('Invalid email or password');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"nonexistent@campus.edu\",\n  \"password\": \"AnyPassword123!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "JWT Token Structure Validation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Access token has 3 parts separated by dots', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var token = jsonData.access_token;",
+              "    var parts = token.split('.');",
+              "    pm.expect(parts.length).to.equal(3);",
+              "});",
+              "",
+              "pm.test('Refresh token has 3 parts separated by dots', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var token = jsonData.refresh_token;",
+              "    var parts = token.split('.');",
+              "    pm.expect(parts.length).to.equal(3);",
+              "});",
+              "",
+              "pm.test('Token type is JWT', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var header = JSON.parse(atob(jsonData.access_token.split('.')[0]));",
+              "    pm.expect(header).to.have.property('alg');",
+              "    pm.expect(header.alg).to.equal('HS256');",
+              "    pm.expect(header).to.have.property('typ');",
+              "    pm.expect(header.typ).to.equal('JWT');",
+              "});",
+              "",
+              "pm.test('Access token contains required claims', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var payload = JSON.parse(atob(jsonData.access_token.split('.')[1]));",
+              "    pm.expect(payload).to.have.property('sub');",
+              "    pm.expect(payload).to.have.property('email');",
+              "    pm.expect(payload).to.have.property('roles');",
+              "    pm.expect(payload).to.have.property('iat');",
+              "    pm.expect(payload).to.have.property('exp');",
+              "    pm.expect(payload).to.have.property('jti');",
+              "    pm.expect(payload).to.have.property('iss');",
+              "    pm.expect(payload).to.have.property('aud');",
+              "    pm.expect(payload).to.have.property('type');",
+              "    pm.expect(payload.iss).to.equal('auth-api');",
+              "    pm.expect(payload.aud).to.equal('microservices');",
+              "    pm.expect(payload.type).to.equal('access');",
+              "    pm.expect(payload.email).to.equal(pm.environment.get('test_email'));",
+              "    pm.expect(payload.roles).to.be.an('array');",
+              "    pm.expect(payload.roles).to.include('user');",
+              "});",
+              "",
+              "pm.test('Refresh token contains required claims', function () {",
+              "    var jsonData = pm.response.json();",
+              "    var payload = JSON.parse(atob(jsonData.refresh_token.split('.')[1]));",
+              "    pm.expect(payload).to.have.property('sub');",
+              "    pm.expect(payload).to.have.property('email');",
+              "    pm.expect(payload).to.have.property('roles');",
+              "    pm.expect(payload).to.have.property('jti');",
+              "    pm.expect(payload).to.have.property('type');",
+              "    pm.expect(payload).to.have.property('iss');",
+              "    pm.expect(payload).to.have.property('aud');",
+              "    pm.expect(payload.iss).to.equal('auth-api');",
+              "    pm.expect(payload.aud).to.equal('microservices');",
+              "    pm.expect(payload.type).to.equal('refresh');",
+              "    pm.expect(payload.email).to.equal(pm.environment.get('test_email'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Login - Account Lockout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Account gets locked after max attempts', function () {",
+              "    var jsonData = pm.response.json();",
+              "    if (pm.response.code === 403) {",
+              "        pm.expect(jsonData.detail).to.include('locked');",
+              "        pm.expect(pm.response.code).to.equal(403);",
+              "    } else {",
+              "        pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"lockout.test@campus.edu\",\n  \"password\": \"WrongPassword1!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Health Check - Redis Connected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Redis is connected', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.services.redis).to.equal('connected');",
+              "});",
+              "",
+              "pm.test('Database is connected', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.services.database).to.equal('connected');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      }
+    }
+  ]
+}

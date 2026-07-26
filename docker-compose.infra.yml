@@ -1,0 +1,87 @@
+services:
+  redis-event-bus:
+    image: redis:7.2-alpine
+    container_name: redis-event-bus
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+    networks:
+      - sentinel_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  sentinel_postgres:
+    image: postgres:16-alpine
+    container_name: sentinel_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-S3nt1n3l#2026}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel_sync}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - sentinel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel_admin} -d ${POSTGRES_DB:-sentinel_sync}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  auth-api:
+    build:
+      context: ./backend/auth
+      dockerfile: Dockerfile
+    container_name: auth-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-sentinel_admin}:${POSTGRES_PASSWORD:-S3nt1n3l%232026}@sentinel_postgres:5432/${POSTGRES_DB:-sentinel_sync}
+      - REDIS_HOST=redis-event-bus
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - MAX_FAILED_ATTEMPTS=${MAX_FAILED_ATTEMPTS:-5}
+      - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-15}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-5}
+    depends_on:
+      redis-event-bus:
+        condition: service_healthy
+      sentinel_postgres:
+        condition: service_healthy
+    networks:
+      - sentinel_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  sentinel_network:
+    driver: bridge
+    name: sentinel_network
