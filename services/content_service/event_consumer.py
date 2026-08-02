@@ -41,10 +41,11 @@ class EventConsumer:
     async def _consume_loop(self):
         try:
             pubsub = self.redis.pubsub()
-            await pubsub.subscribe(*self.handlers.keys())
+            await asyncio.to_thread(pubsub.subscribe, *self.handlers.keys())
 
             while self._running:
-                message = await pubsub.get_message(
+                message = await asyncio.to_thread(
+                    pubsub.get_message,
                     ignore_subscribe_messages=True,
                     timeout=1.0
                 )

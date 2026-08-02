@@ -35,8 +35,8 @@ The project is developed in phases, each building a foundational layer for the n
 | **Phase 1** | Database schema, PostgreSQL containers, seed data, API contract | ✅ Complete |
 | **Phase 2** | JWT auth API, Redis event bus, Docker infrastructure | ✅ Complete |
 | **Phase 3** | CRUD microservices (Content Service + AI Assistant) | ✅ Complete |
-| **Phase 4** | Advanced AI features, real-time notifications | 🔜 Upcoming |
-| **Phase 5** | Frontend dashboard & real-time UI | 🔜 Upcoming |
+| **Phase 4** | Campus Hub Dashboard & AI Assistant UI | ✅ Complete |
+| **Phase 5** | Real-time data streaming & live notifications | 🔜 Upcoming |
 
 ---
 
@@ -58,6 +58,8 @@ The project is developed in phases, each building a foundational layer for the n
 | **Content Service** | CRUD for notices & equipment with state machines | `services/content_service/` (12 files) |
 | **AI Assistant** | Groq LLM + Milvus vector search + SSE streaming | `services/ai_assistant/` (10 files) |
 | **Phase 3 Documentation** | Comprehensive OST/FST/SST/LST compliance docs | `Phase3.md` |
+| **Frontend Dashboard** | React 18 + Tailwind 3 + Framer Motion campus hub UI | `frontend/` (16+ files) |
+| **Phase 4 Documentation** | Comprehensive OST/FST/SST/LST compliance docs | `Phase4.md` |
 
 ### Key Numbers
 
@@ -74,6 +76,11 @@ The project is developed in phases, each building a foundational layer for the n
 | Postman Tests | 11 |
 | Python Dependencies | 25+ |
 | State Machines | 2 (notice lifecycle, equipment lifecycle) |
+| Frontend Components | 9 (Sidebar, Header, Dashboard, OverviewStats, AIAssistant, ChatWidget, ToastContainer, CardDetailModal, Icon) |
+| Frontend Logic Modules | 11 (equipment, cafe, transit, status, formatting, search, filter, sorting, chatBot, toast, validation) |
+| Mock Catalog Items | 24 (8 equipment + 10 cafe + 6 transit) |
+| FAQ Entries | 15 |
+| Frontend Build Size | JS ~407 kB (gzip ~122 kB), CSS ~44.5 kB (gzip ~8 kB) |
 
 ---
 
@@ -200,6 +207,45 @@ Phase 3 delivers **two core microservices** — a Content Service for CRUD opera
 | Equipment | available → in_use → maintenance → retired | State-based with validation |
 
 > 📄 Full details: [`Phase3.md`](Phase3.md)
+
+---
+
+### Phase 4: Campus Hub Dashboard & AI Assistant UI
+
+Phase 4 delivers the **frontend dashboard** — a modern single-page web application (static mock UI) that unifies all Sentinel-Sync data streams into one polished interface.
+
+**Deliverables:**
+- Application shell: fixed left sidebar, sticky header, scrollable content area
+- Dashboard overview with 4 summary cards + lightweight pure-CSS charts
+- Equipment / Cafe / Transit category views with search, filters, sorting, grid/list toggle
+- AI FAQ chatbot with typing indicator, suggestion chips, and shared chat state
+- Floating chat launcher (FAB) available on every page
+- Toast notification system (4 variants, max 3 active, pause/clear)
+- Preferences system: light/dark theme, compact mode, animations, refresh interval, toast duration
+- Persistence to `localStorage` (`campus_hub_state`) for chat + preferences
+- Simulated live polling for equipment/transit and periodic toast events
+- Two verified backend fixes: content-service `/health` (DB + Redis) and Redis pub/sub event consumer
+
+**Frontend Stack:**
+
+| Component | Technology |
+|-----------|-----------|
+| **UI Framework** | React 18.3.1 (Vite 5.4) |
+| **Styling** | Tailwind CSS 3.4.10 (dark mode via `class`) |
+| **Animation** | framer-motion 12 |
+| **Icons** | lucide-react (57-icon registry) |
+| **Dev server** | `http://localhost:5173` |
+
+**Quick Start:**
+
+```bash
+cd frontend
+npm install
+npm.cmd run dev        # Windows PowerShell — use npm.cmd (npm.ps1 is blocked)
+# Open http://localhost:5173
+```
+
+> 📄 Full details: [`Phase4.md`](Phase4.md)
 
 ---
 
@@ -381,6 +427,7 @@ Pro/
 ├── Phase1.md                         # Phase 1 documentation
 ├── Phase2.md                         # Phase 2 documentation
 ├── Phase3.md                         # Phase 3 documentation
+├── Phase4.md                         # Phase 4 documentation
 ├── docker-compose.infra.yml          # All services: Auth, Content, AI, PostgreSQL, Redis, Milvus
 ├── data/
 │   ├── postgres/                     # PostgreSQL data (D: drive)
@@ -437,6 +484,21 @@ Pro/
 │       ├── cache_manager.py          # Redis caching layer
 │       ├── requirements.txt          # Python dependencies
 │       └── Dockerfile                # Container build
+├── frontend/
+│   ├── index.html                    # Entry HTML + CSP + Google Fonts
+│   ├── package.json                  # Deps + scripts
+│   ├── vite.config.js                # Vite + React plugin (port 5173)
+│   ├── tailwind.config.js            # darkMode class, fonts, shadows, keyframes
+│   └── src/
+│       ├── main.jsx                  # ReactDOM.createRoot + <AppProvider>
+│       ├── App.jsx                   # Shell: Sidebar + Header + main + overlays
+│       ├── index.css                 # Tailwind layers + global styles
+│       ├── selectors.js              # Derived state selectors
+│       ├── data/mockData.js          # Equipment, cafe, transit, FAQ, toast queue
+│       ├── context/                  # AppContext.jsx + reducers.js
+│       ├── logic/                    # 11 pure-logic modules
+│       └── components/               # Sidebar, Header, Dashboard, OverviewStats,
+│                                     # AIAssistant, ChatWidget, ToastContainer, ...
 └── milvus/
     └── embeddings/                   # Milvus embedding storage
 ```
@@ -551,9 +613,9 @@ Pro/
 
 | Phase | Focus | Key Technologies |
 |-------|-------|------------------|
-| **Phase 4** | Advanced AI features, real-time notifications | WebSocket, advanced vector search |
-| **Phase 5** | Frontend dashboard | React, WebSocket, Real-time UI |
-| **Phase 6** | Role-based access control | RBAC, admin panel |
+| **Phase 5** | Real-time data streaming & live notifications | WebSocket, advanced vector search |
+| **Phase 6** | Frontend-backend integration | React, WebSocket, Real-time UI |
+| **Phase 7** | Role-based access control | RBAC, admin panel |
 
 ---
 

@@ -14,6 +14,6 @@ Thumbs.db
 *~
 postgres_data/
 pgadmin_data/
-data/
+/data/
 redis-data/
 backend/auth/__pycache__/

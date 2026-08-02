@@ -8,6 +8,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from database import get_db, engine, Base, SessionLocal
 from schemas import (
     NoticeCreate, NoticeUpdate, NoticeResponse, NoticeListResponse,
@@ -135,12 +136,16 @@ def require_auth(authorization: str = None) -> str:
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
     db_status = "connected"
+    db = None
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
-        db.close()
-    except Exception:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("DB health check failed: %s", exc)
         db_status = "disconnected"
+    finally:
+        if db is not None:
+            db.close()
 
     redis_health = redis_client.get_health()
 

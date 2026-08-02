@@ -102,6 +102,9 @@ class RedisClient:
     async def async_delete(self, key: str):
         self.delete(key)
 
+    def pubsub(self):
+        return self.client.pubsub()
+
     def keys(self, pattern: str) -> List[str]:
         if not self.circuit_breaker.can_execute():
             return []
