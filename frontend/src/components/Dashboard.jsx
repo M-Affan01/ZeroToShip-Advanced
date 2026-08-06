@@ -168,12 +168,12 @@ const EquipmentCard = ({ item, onCardClick, viewMode = 'grid' }) => {
   const imageBlock = (
     <div className={isList ? 'relative w-36 shrink-0 sm:w-44' : 'relative h-36 md:h-44 lg:h-48'}>
       <CardImage
-        src={item.imageUrl}
+        src={item.imageUrl || item.image_url}
         icon={EquipmentLogic.getStatusIcon(item.status)}
         gradient="from-sky-500 to-blue-700"
       />
       <span className="absolute left-2.5 top-2.5 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-        {FormattingLogic.formatEquipmentCategory(item.category)}
+        {FormattingLogic.formatEquipmentCategory(item.category || item.type)}
       </span>
       <span className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-slate-700 backdrop-blur-sm dark:bg-slate-800/90 dark:text-slate-200">
         <Icon name={status.icon} size={12} />
@@ -191,7 +191,7 @@ const EquipmentCard = ({ item, onCardClick, viewMode = 'grid' }) => {
       <div className="mt-auto flex items-center justify-between pt-2">
         <StatusBadge className={status.color} icon={status.icon} label={status.label} />
         <span className="text-[10px] text-slate-400 dark:text-slate-500">
-          {FormattingLogic.getRelativeTime(new Date(item.lastUpdated))}
+          {FormattingLogic.getRelativeTime(new Date(item.updated_at || item.lastUpdated || Date.now()))}
         </span>
       </div>
     </div>
@@ -210,7 +210,7 @@ const CafeCard = ({ item, onCardClick, viewMode = 'grid' }) => {
   const imageBlock = (
     <div className={isList ? 'relative w-36 shrink-0 sm:w-44' : 'relative h-36 md:h-44 lg:h-48'}>
       <CardImage
-        src={item.imageUrl}
+        src={item.imageUrl || item.image_url}
         icon={CafeLogic.getCategoryIcon(item.category)}
         gradient="from-rose-400 to-orange-500"
       />
@@ -263,7 +263,7 @@ const TransitCard = ({ item, onCardClick, viewMode = 'grid' }) => {
   const imageBlock = (
     <div className={isList ? 'relative w-40 shrink-0 sm:w-52' : 'relative h-32 md:h-36'}>
       <CardImage
-        src={item.imageUrl}
+        src={item.imageUrl || item.image_url}
         icon={TransitLogic.getTransitIcon(item.type)}
         gradient="from-indigo-500 to-blue-600"
       />

@@ -22,6 +22,14 @@ export const ChatBotLogic = {
       return { text: 'Please ask me a question about campus services!', confidence: 0 };
     }
 
+    if (!faqData || !Array.isArray(faqData) || faqData.length === 0) {
+      return {
+        text: this.getFallbackResponse(),
+        confidence: 0,
+        suggestedQuestions: [],
+      };
+    }
+
     const contextMatch = this.checkContext(normalizedQuery, chatHistory);
     if (contextMatch) {
       return { ...contextMatch, confidence: 0.9 };
@@ -59,8 +67,9 @@ export const ChatBotLogic = {
     const queryLength = queryWords.length;
 
     const scored = faqData.map((faq) => {
-      const matchedKeywords = faq.keywords.filter((keyword) => query.includes(keyword));
-      const keywordScore = faq.keywords.length > 0 ? matchedKeywords.length / faq.keywords.length : 0;
+      const keywords = faq.keywords || [];
+      const matchedKeywords = keywords.filter((keyword) => query.includes(keyword));
+      const keywordScore = keywords.length > 0 ? matchedKeywords.length / keywords.length : 0;
 
       const questionWords = this.normalizeText(faq.question).split(' ');
       const commonWords = queryWords.filter((word) => questionWords.includes(word));

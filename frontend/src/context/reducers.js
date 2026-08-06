@@ -85,6 +85,7 @@ export const INITIAL_STATE = {
     cafe: [],
     transit: [],
     faq: [],
+    metrics: null,
   },
   ui: INITIAL_UI,
   chat: INITIAL_CHAT,
@@ -103,8 +104,17 @@ const dataReducer = (state, action) => {
       return { ...state, transit: action.payload, transitLoaded: true };
     case 'FAQ_LOAD':
       return { ...state, faq: action.payload, faqLoaded: true };
+    case 'METRICS_LOAD':
+      return { ...state, metrics: action.payload };
     case 'EQUIPMENT_UPDATE_ALL':
       return { ...state, equipment: action.payload };
+    case 'EQUIPMENT_UPDATE_STATUS':
+      return {
+        ...state,
+        equipment: state.equipment.map((item) =>
+          item.id === action.payload.serviceId ? { ...item, status: action.payload.newStatus, lastUpdated: new Date().toISOString() } : item
+        ),
+      };
     case 'TRANSIT_UPDATE_ALL':
       return { ...state, transit: action.payload };
     case 'EQUIPMENT_SIMULATE_POLL':

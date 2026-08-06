@@ -1,19 +1,64 @@
+# Dependencies
 __pycache__/
 node_modules/
-.env
 *.pyc
 *.pyo
-.pytest_cache/
 .mypy_cache/
-.DS_Store
-Thumbs.db
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data volumes
+/data/
 postgres_data/
 pgadmin_data/
-/data/
 redis-data/
-backend/auth/__pycache__/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Node
+package-lock.json
+yarn.lock
+
+# API Gateway
+api-gateway/node_modules/
+
+# WebSocket
+services/websocket/node_modules/
+
+# Event Bus
+services/event_bus/node_modules/

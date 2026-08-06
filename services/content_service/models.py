@@ -37,6 +37,7 @@ class Equipment(Base):
     location = Column(String(200), nullable=True)
     status = Column(String(50), nullable=False, default="available")
     maintenance_schedule = Column(DateTime(timezone=True), nullable=True)
+    image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime(timezone=True), nullable=True)

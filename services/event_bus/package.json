@@ -1,0 +1,15 @@
+{
+  "name": "sentinel-event-bus",
+  "version": "1.0.0",
+  "description": "Redis Event Bus for inter-service communication",
+  "main": "bus.js",
+  "scripts": {
+    "start": "node bus.js",
+    "dev": "node bus.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1"
+  }
+}

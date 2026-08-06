@@ -36,7 +36,7 @@ The project is developed in phases, each building a foundational layer for the n
 | **Phase 2** | JWT auth API, Redis event bus, Docker infrastructure | ✅ Complete |
 | **Phase 3** | CRUD microservices (Content Service + AI Assistant) | ✅ Complete |
 | **Phase 4** | Campus Hub Dashboard & AI Assistant UI | ✅ Complete |
-| **Phase 5** | Real-time data streaming & live notifications | 🔜 Upcoming |
+| **Phase 5** | Full system integration, WebSocket, API Gateway, live data | ✅ Complete |
 
 ---
 
@@ -60,22 +60,32 @@ The project is developed in phases, each building a foundational layer for the n
 | **Phase 3 Documentation** | Comprehensive OST/FST/SST/LST compliance docs | `Phase3.md` |
 | **Frontend Dashboard** | React 18 + Tailwind 3 + Framer Motion campus hub UI | `frontend/` (16+ files) |
 | **Phase 4 Documentation** | Comprehensive OST/FST/SST/LST compliance docs | `Phase4.md` |
+| **API Gateway** | Express.js unified API entry point with proxy routing | `api-gateway/` (4 files) |
+| **WebSocket Server** | Real-time push notifications with Redis pub/sub | `services/websocket/` (4 files) |
+| **Event Bus Service** | Dedicated Redis event distribution service | `services/event_bus/` (4 files) |
+| **Frontend API Layer** | fetch() hooks + WebSocket React hooks | `frontend/src/services/`, `frontend/src/hooks/` |
+| **Master Docker Compose** | 12-service orchestration with health checks | `docker-compose.yml` |
+| **Nginx Reverse Proxy** | Frontend routing for API + WebSocket | `frontend/nginx.conf` |
+| **Phase 5 Documentation** | Full integration specs | `Phase5.md` |
 
 ### Key Numbers
 
 | Metric | Value |
 |--------|-------|
-| Total Files | 50+ |
+| Total Files | 70+ |
 | Database Tables | 10 (4 Phase 1 + 6 Phase 3) |
 | Auth API Endpoints | 3 (register, login, health) |
 | Content Service Endpoints | 11 (notices CRUD + equipment CRUD + health) |
 | AI Assistant Endpoints | 5 (query, stream, feedback, history, health) |
+| API Gateway Endpoints | 15 (unified proxy + dashboard + events) |
 | JWT Claims | 9 (sub, email, roles, iat, exp, jti, iss, aud, type) |
-| Redis Event Topics | 10 (3 Phase 1 + 7 Phase 3) |
-| Docker Containers | 8 (auth-api, content-service, ai-assistant, postgres, redis, milvus + 2 Milvus deps) |
+| Redis Event Topics | 5 (cis_events, content.events, equipment.events, notification.events, service.events) |
+| Docker Containers | 12 (all services + infrastructure) |
 | Postman Tests | 11 |
 | Python Dependencies | 25+ |
+| Node.js Dependencies | 15+ |
 | State Machines | 2 (notice lifecycle, equipment lifecycle) |
+| WebSocket Events | 6 (connected, authenticated, subscribed, event, notification, ping/pong) |
 | Frontend Components | 9 (Sidebar, Header, Dashboard, OverviewStats, AIAssistant, ChatWidget, ToastContainer, CardDetailModal, Icon) |
 | Frontend Logic Modules | 11 (equipment, cafe, transit, status, formatting, search, filter, sorting, chatBot, toast, validation) |
 | Mock Catalog Items | 24 (8 equipment + 10 cafe + 6 transit) |
@@ -249,6 +259,84 @@ npm.cmd run dev        # Windows PowerShell — use npm.cmd (npm.ps1 is blocked)
 
 ---
 
+### Phase 5: Full System Integration
+
+Phase 5 delivers the **complete unified application** — API Gateway, WebSocket real-time notifications, Redis Event Bus, and live frontend data integration.
+
+**Deliverables:**
+- API Gateway (Express.js) unifying all microservices under one endpoint
+- WebSocket server for real-time push notifications to dashboard
+- Redis Event Bus service for inter-service async communication
+- Frontend `fetch()` hooks replacing all mock data with live API calls
+- WebSocket React hooks for real-time dashboard updates
+- Master `docker-compose.yml` orchestrating all 12 services
+- Nginx reverse proxy for frontend with API/WebSocket routing
+- Graceful fallback to mock data when API unavailable
+
+**New Services:**
+
+| Service | Technology | Port | Purpose |
+|---------|-----------|------|---------|
+| `api-gateway` | Express.js | 3000 | Unified API entry point, proxy to all services |
+| `websocket` | ws (Node.js) | 8080 | Real-time push notifications to clients |
+| `event-bus` | ioredis | — | Redis pub/sub event distribution |
+| `frontend` | React + Nginx | 80 | Dashboard with live API integration |
+
+**API Gateway Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/health` | Aggregated health check for all services |
+| `GET` | `/api/v1/dashboard` | Dashboard data (equipment + notices + metrics) |
+| `GET` | `/api/v1/equipment` | Equipment list (proxied to content-service) |
+| `GET` | `/api/v1/equipment/:id` | Equipment detail |
+| `POST` | `/api/v1/equipment` | Create equipment |
+| `PATCH` | `/api/v1/equipment/:id` | Update equipment |
+| `DELETE` | `/api/v1/equipment/:id` | Delete equipment |
+| `GET` | `/api/v1/notices` | Notices list (proxied to content-service) |
+| `GET` | `/api/v1/notices/:id` | Notice detail |
+| `POST` | `/api/v1/notices` | Create notice |
+| `PATCH` | `/api/v1/notices/:id` | Update notice |
+| `DELETE` | `/api/v1/notices/:id` | Delete notice |
+| `POST` | `/api/v1/ai/query` | AI query (proxied to ai-assistant) |
+| `POST` | `/api/v1/ai/feedback` | AI feedback |
+| `POST` | `/api/v1/events/publish` | Publish event to Redis |
+
+**WebSocket Events:**
+
+| Event Type | Direction | Description |
+|------------|-----------|-------------|
+| `connected` | Server → Client | Connection established |
+| `authenticated` | Server → Client | Client authenticated |
+| `subscribed` | Server → Client | Subscribed to channel |
+| `event` | Server → Client | Real-time event from Redis |
+| `notification` | Server → Client | Push notification |
+| `ping/pong` | Bidirectional | Heartbeat |
+
+**Frontend Integration:**
+- `src/services/api.js` — API service with JWT auth, error handling, timeout
+- `src/services/api.js` — WebSocket service with auto-reconnect
+- `src/hooks/useWebSocket.js` — React hook for WebSocket subscriptions
+- AppContext updated to load live data from API on mount
+- Fallback to mock data when backend unavailable
+
+**Quick Start:**
+
+```bash
+# Start all 12 services
+docker-compose --env-file .env up -d
+
+# Verify API Gateway
+curl http://localhost:3000/api/v1/health
+
+# Open dashboard
+open http://localhost:80
+```
+
+> 📄 Full details: [`Phase5.md`](Phase5.md)
+
+---
+
 ## Technology Stack
 
 | Layer | Technology | Version |
@@ -410,10 +498,15 @@ CORS_ORIGINS=*
 
 | Service | Port | Purpose |
 |---------|------|---------|
+| Frontend | 80 | Dashboard UI (Nginx) |
+| API Gateway | 3000 | Unified API entry point |
+| Auth API | 8000 | JWT Authentication |
+| Content Service | 8001 | Notices & Equipment CRUD |
+| AI Assistant | 8002 | Groq LLM + Milvus |
+| WebSocket | 8080 | Real-time notifications |
 | PostgreSQL | 5432 | Database |
 | Redis | 6379 | Event Bus |
-| Auth API | 8000 | REST API |
-| pgAdmin | 5050 | DB Management (Phase 1) |
+| Milvus | 19530 | Vector Database |
 
 ---
 
@@ -421,18 +514,22 @@ CORS_ORIGINS=*
 
 ```
 Pro/
-├── .env                              # Environment variables
+├── .env                              # Environment variables (all phases)
 ├── .gitignore                        # Git ignore rules
 ├── README.md                         # This file
 ├── Phase1.md                         # Phase 1 documentation
 ├── Phase2.md                         # Phase 2 documentation
 ├── Phase3.md                         # Phase 3 documentation
 ├── Phase4.md                         # Phase 4 documentation
-├── docker-compose.infra.yml          # All services: Auth, Content, AI, PostgreSQL, Redis, Milvus
+├── Phase5.md                         # Phase 5 documentation
+├── docker-compose.yml                # Master compose: all 12 services
+├── docker-compose.infra.yml          # Infrastructure only (legacy)
 ├── data/
 │   ├── postgres/                     # PostgreSQL data (D: drive)
 │   ├── redis/                        # Redis data (D: drive)
-│   └── pgadmin/                      # pgAdmin data (D: drive)
+│   ├── milvus/                       # Milvus vector data
+│   ├── etcd/                         # Milvus etcd data
+│   └── minio/                        # Milvus minio data
 ├── database/
 │   ├── schema.sql                    # Phase 1 schema (4 tables, functions, views)
 │   ├── test_seed.sql                 # Seed data (5 users, 10 services, 15 logs)
@@ -440,6 +537,11 @@ Pro/
 │   └── docker-compose.db.yml         # Phase 1: Database compose
 ├── docs/
 │   └── api_contract.md               # REST API contract
+├── api-gateway/                      # Phase 5: API Gateway
+│   ├── server.js                     # Express.js unified API entry point
+│   ├── package.json                  # Node.js dependencies
+│   ├── Dockerfile                    # Container build
+│   └── .dockerignore                 # Build exclusions
 ├── backend/
 │   ├── auth/
 │   │   ├── main.py                   # FastAPI app + routes
@@ -457,6 +559,16 @@ Pro/
 │   └── tests/
 │       └── auth_test.json            # Postman collection (11 tests)
 ├── services/
+│   ├── websocket/                    # Phase 5: WebSocket Server
+│   │   ├── server.js                 # WebSocket server with Redis pub/sub
+│   │   ├── package.json              # Node.js dependencies
+│   │   ├── Dockerfile                # Container build
+│   │   └── .dockerignore             # Build exclusions
+│   ├── event_bus/                    # Phase 5: Redis Event Bus
+│   │   ├── bus.js                    # Event bus with pub/sub
+│   │   ├── package.json              # Node.js dependencies
+│   │   ├── Dockerfile                # Container build
+│   │   └── .dockerignore             # Build exclusions
 │   ├── content_service/
 │   │   ├── main.py                   # FastAPI CRUD app with rate limiting
 │   │   ├── config.py                 # Settings with RATE_LIMIT_PER_MINUTE
@@ -487,14 +599,20 @@ Pro/
 ├── frontend/
 │   ├── index.html                    # Entry HTML + CSP + Google Fonts
 │   ├── package.json                  # Deps + scripts
-│   ├── vite.config.js                # Vite + React plugin (port 5173)
+│   ├── vite.config.js                # Vite + React + API proxy config
 │   ├── tailwind.config.js            # darkMode class, fonts, shadows, keyframes
+│   ├── nginx.conf                    # Phase 5: Nginx reverse proxy config
+│   ├── Dockerfile                    # Phase 5: Multi-stage build
 │   └── src/
 │       ├── main.jsx                  # ReactDOM.createRoot + <AppProvider>
 │       ├── App.jsx                   # Shell: Sidebar + Header + main + overlays
 │       ├── index.css                 # Tailwind layers + global styles
 │       ├── selectors.js              # Derived state selectors
-│       ├── data/mockData.js          # Equipment, cafe, transit, FAQ, toast queue
+│       ├── data/mockData.js          # Fallback data (used when API unavailable)
+│       ├── services/
+│       │   └── api.js                # Phase 5: API + WebSocket service
+│       ├── hooks/
+│       │   └── useWebSocket.js       # Phase 5: React WebSocket hook
 │       ├── context/                  # AppContext.jsx + reducers.js
 │       ├── logic/                    # 11 pure-logic modules
 │       └── components/               # Sidebar, Header, Dashboard, OverviewStats,
@@ -551,9 +669,13 @@ Pro/
 
 | Container | Image | Port | Health Check | Data |
 |-----------|-------|------|--------------|------|
+| `frontend` | pro-frontend | 80 | nginx | — |
+| `api-gateway` | pro-api-gateway | 3000 | wget health | — |
 | `auth-api` | pro-auth-api | 8000 | python urllib | — |
 | `content-service` | pro-content-service | 8001 | python urllib | — |
 | `ai-assistant` | pro-ai-assistant | 8002 | python urllib | — |
+| `websocket` | pro-websocket | 8080 | wget health | — |
+| `event-bus` | pro-event-bus | — | node ping | — |
 | `sentinel_postgres` | postgres:16-alpine | 5432 | pg_isready | `./data/postgres` |
 | `redis-event-bus` | redis:7.2-alpine | 6379 | redis-cli ping | `./data/redis` |
 | `milvus` | milvusdb/milvus:v2.4-latest | 19530 | milvus health | Milvus data |
@@ -595,10 +717,12 @@ Pro/
 
 | Action | Command |
 |--------|---------|
-| Start all services | `docker-compose --env-file .env -f docker-compose.infra.yml up -d` |
-| Stop all services | `docker-compose --env-file .env -f docker-compose.infra.yml down` |
-| Rebuild & start | `docker-compose --env-file .env -f docker-compose.infra.yml up -d --build` |
-| View logs | `docker-compose --env-file .env -f docker-compose.infra.yml logs -f` |
+| Start all services | `docker-compose --env-file .env up -d` |
+| Stop all services | `docker-compose --env-file .env down` |
+| Rebuild & start | `docker-compose --env-file .env up -d --build` |
+| View logs | `docker-compose --env-file .env logs -f` |
+| API Gateway logs | `docker logs api-gateway -f` |
+| WebSocket logs | `docker logs websocket -f` |
 | Auth API logs | `docker logs auth-api -f` |
 | Content Service logs | `docker logs content-service -f` |
 | AI Assistant logs | `docker logs ai-assistant -f` |
@@ -613,9 +737,8 @@ Pro/
 
 | Phase | Focus | Key Technologies |
 |-------|-------|------------------|
-| **Phase 5** | Real-time data streaming & live notifications | WebSocket, advanced vector search |
-| **Phase 6** | Frontend-backend integration | React, WebSocket, Real-time UI |
-| **Phase 7** | Role-based access control | RBAC, admin panel |
+| **Phase 6** | Role-based access control & admin panel | RBAC, admin dashboard |
+| **Phase 7** | Advanced monitoring & alerting | Prometheus, Grafana |
 
 ---
 

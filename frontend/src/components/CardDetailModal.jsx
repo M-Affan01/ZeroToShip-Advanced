@@ -45,11 +45,14 @@ export default function CardDetailModal() {
   };
 
   let body = null;
-  let categoryLabel = '';
+  let categoryLabel = 'Unknown';
 
-  if ('status' in item) {
+  const hasStatus = 'status' in item && !('available' in item);
+  const hasPrice = 'price' in item;
+
+  if (hasStatus) {
     const status = StatusLogic.getEquipmentStatusInfo(item.status);
-    categoryLabel = FormattingLogic.formatEquipmentCategory(item.category);
+    categoryLabel = FormattingLogic.formatEquipmentCategory(item.category || item.type);
     body = (
       <>
         <DetailRow label="Category">{categoryLabel}</DetailRow>
@@ -60,11 +63,11 @@ export default function CardDetailModal() {
         </DetailRow>
         <DetailRow label="Location">{FormattingLogic.formatLocation(item.location)}</DetailRow>
         <DetailRow label="Last updated">
-          {FormattingLogic.formatDate(item.lastUpdated, 'full')}
+          {FormattingLogic.formatDate(item.updated_at || item.lastUpdated, 'full')}
         </DetailRow>
       </>
     );
-  } else if ('price' in item) {
+  } else if (hasPrice) {
     const availability = StatusLogic.getAvailabilityStatusInfo(item.available);
     categoryLabel = FormattingLogic.formatCafeCategory(item.category);
     body = (
@@ -137,19 +140,26 @@ export default function CardDetailModal() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative h-44 bg-slate-100 dark:bg-slate-800">
-              {typeof item.imageUrl === 'string' && item.imageUrl.startsWith('data:') ? (
-                <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                  }}
-                  className="h-full w-full object-cover"
-                />
-              )}
+              {(() => {
+                const imgSrc = item.imageUrl || item.image_url;
+                return imgSrc ? (
+                  <>
+                    {typeof imgSrc === 'string' && imgSrc.startsWith('data:') ? (
+                      <img src={imgSrc} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <img
+                        src={imgSrc}
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                  </>
+                ) : null;
+              })()}
               <div className="hidden h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500 to-blue-600 text-6xl text-white">
                 {categoryLabel.split(' ')[0]}
               </div>

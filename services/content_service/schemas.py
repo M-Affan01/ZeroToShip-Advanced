@@ -101,6 +101,7 @@ class EquipmentResponse(BaseModel):
     location: Optional[str] = None
     status: str
     maintenance_schedule: Optional[str] = None
+    image_url: Optional[str] = None
     created_at: str
     updated_at: str
     version: int

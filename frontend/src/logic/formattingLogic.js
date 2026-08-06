@@ -5,6 +5,7 @@
 
 export const FormattingLogic = {
   formatDate(date, format = 'full') {
+    if (!date) return 'N/A';
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return 'Invalid Date';
     switch (format) {
@@ -29,6 +30,7 @@ export const FormattingLogic = {
   },
 
   getRelativeTime(date) {
+    if (!date || isNaN(date.getTime())) return 'N/A';
     const now = new Date();
     const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     if (diffSeconds < 60) return 'Just now';

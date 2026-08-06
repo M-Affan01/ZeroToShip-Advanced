@@ -340,6 +340,52 @@ async def delete_equipment_endpoint(
             raise HTTPException(status_code=400, detail=error_msg)
 
 
+import json as json_module
+
+@app.get("/api/cafe", tags=["Cafe"])
+@limiter.limit("100/minute")
+async def list_cafe_items(
+    request: Request,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = text("SELECT * FROM cafe_items ORDER BY name")
+    if category:
+        query = text("SELECT * FROM cafe_items WHERE category = :category ORDER BY name")
+        result = db.execute(query, {"category": category})
+    else:
+        result = db.execute(query)
+    items = []
+    for row in result:
+        item = dict(row._mapping)
+        if isinstance(item.get('dietary'), str):
+            item['dietary'] = json_module.loads(item['dietary'])
+        items.append(item)
+    return {"cafe": items, "total": len(items)}
+
+
+@app.get("/api/transit", tags=["Transit"])
+@limiter.limit("100/minute")
+async def list_transit_items(
+    request: Request,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    result = db.execute(text("SELECT * FROM transit_items ORDER BY name"))
+    items = []
+    for row in result:
+        item = dict(row._mapping)
+        if isinstance(item.get('route'), str):
+            item['route'] = json_module.loads(item['route'])
+        if isinstance(item.get('alerts'), str):
+            item['alerts'] = json_module.loads(item['alerts'])
+        items.append(item)
+    return {"transit": items, "total": len(items)}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=settings.SERVICE_PORT)

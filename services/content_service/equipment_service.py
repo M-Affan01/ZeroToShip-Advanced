@@ -161,6 +161,7 @@ def get_equipment_list(db: Session, page: int = 1, page_size: int = 20, status: 
                 "location": e.location,
                 "status": e.status,
                 "maintenance_schedule": e.maintenance_schedule.isoformat() if e.maintenance_schedule else None,
+                "image_url": e.image_url if hasattr(e, 'image_url') else None,
                 "created_at": e.created_at.isoformat(),
                 "updated_at": e.updated_at.isoformat(),
                 "version": e.version

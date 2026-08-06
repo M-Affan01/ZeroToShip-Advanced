@@ -1,16 +1,11 @@
 /**
  * AppContext - Internal Dynamic (SST)
- * React Context API + useReducer. Static mock data loaded on mount,
- * simulated polling + toast triggers, LocalStorage persistence.
+ * React Context API + useReducer. Live API data loaded on mount,
+ * WebSocket real-time updates, simulated polling + toast triggers, LocalStorage persistence.
  */
 
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
-import {
-  EQUIPMENT_DATA,
-  CAFE_DATA,
-  TRANSIT_DATA,
-  FAQ_DATA,
-} from '../data/mockData.js';
+import { api, ws } from '../services/api.js';
 import { ChatBotLogic } from '../logic/chatBotLogic.js';
 import { ToastLogic } from '../logic/toastLogic.js';
 import { INITIAL_STATE, rootReducer } from './reducers.js';
@@ -64,12 +59,29 @@ const AppProvider = ({ children }) => {
     }
   }, [state.preferences.theme]);
 
-  // Load static mock data on mount (STATIC DATA LOAD)
+  // Load live data from API on mount (REPLACES MOCK DATA)
   useEffect(() => {
-    dispatch({ type: 'EQUIPMENT_LOAD', payload: EQUIPMENT_DATA });
-    dispatch({ type: 'CAFE_LOAD', payload: CAFE_DATA });
-    dispatch({ type: 'TRANSIT_LOAD', payload: TRANSIT_DATA });
-    dispatch({ type: 'FAQ_LOAD', payload: FAQ_DATA });
+    const loadData = async () => {
+      dispatch({ type: 'UI_SET_LOADING', payload: true });
+      try {
+        const dashboardData = await api.getDashboard();
+        if (dashboardData.services) dispatch({ type: 'EQUIPMENT_LOAD', payload: dashboardData.services });
+        if (dashboardData.notices) dispatch({ type: 'FAQ_LOAD', payload: dashboardData.notices });
+        if (dashboardData.cafe) dispatch({ type: 'CAFE_LOAD', payload: dashboardData.cafe });
+        if (dashboardData.transit) dispatch({ type: 'TRANSIT_LOAD', payload: dashboardData.transit });
+        if (dashboardData.metrics) dispatch({ type: 'METRICS_LOAD', payload: dashboardData.metrics });
+      } catch (err) {
+        console.warn('API unavailable, using fallback data:', err.message);
+        const { EQUIPMENT_DATA, CAFE_DATA, TRANSIT_DATA, FAQ_DATA } = await import('../data/mockData.js');
+        dispatch({ type: 'EQUIPMENT_LOAD', payload: EQUIPMENT_DATA });
+        dispatch({ type: 'CAFE_LOAD', payload: CAFE_DATA });
+        dispatch({ type: 'TRANSIT_LOAD', payload: TRANSIT_DATA });
+        dispatch({ type: 'FAQ_LOAD', payload: FAQ_DATA });
+      } finally {
+        dispatch({ type: 'UI_SET_LOADING', payload: false });
+      }
+    };
+    loadData();
   }, []);
 
   // Persist preferences + chat to LocalStorage
@@ -101,19 +113,42 @@ const AppProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Simulated polling (visual only) + random toast triggers
+  // Live polling from API + WebSocket real-time updates
   useEffect(() => {
-    const equipmentTimer = setInterval(() => {
+    ws.connect();
+    ws.subscribe('cis_events');
+    ws.subscribe('notification.events');
+
+    const unsubNotification = ws.on('notification', (data) => {
+      if (data.data) {
+        dispatch({
+          type: 'TOAST_ADD',
+          payload: ToastLogic.createToast(
+            data.data.severity === 'error' ? 'error' : data.data.severity === 'warning' ? 'warning' : 'info',
+            data.data.title || 'System Notification',
+            data.data.message || 'An event occurred'
+          ),
+        });
+      }
+    });
+
+    const unsubEvent = ws.on('event', (data) => {
+      if (data.channel === 'equipment.events' && data.data?.type === 'STATUS_CHANGED') {
+        dispatch({ type: 'EQUIPMENT_UPDATE_STATUS', payload: data.data });
+      }
+    });
+
+    const equipmentTimer = setInterval(async () => {
       if (!stateRef.current.preferences.autoRefresh) return;
-      dispatch({ type: 'EQUIPMENT_SIMULATE_POLL' });
+      try {
+        const result = await api.getEquipment();
+        const items = result.equipment || result.items || [];
+        if (items.length) dispatch({ type: 'EQUIPMENT_UPDATE_ALL', payload: items });
+      } catch {
+        dispatch({ type: 'EQUIPMENT_SIMULATE_POLL' });
+      }
       dispatch({ type: 'UI_SET_LAST_UPDATED', payload: new Date().toISOString() });
     }, (stateRef.current.preferences.refreshInterval || 30) * 1000);
-
-    const transitTimer = setInterval(() => {
-      if (!stateRef.current.preferences.autoRefresh) return;
-      dispatch({ type: 'TRANSIT_SIMULATE_POLL' });
-      dispatch({ type: 'UI_SET_LAST_UPDATED', payload: new Date().toISOString() });
-    }, 45000);
 
     const toastTimer = setInterval(() => {
       const [event] = ToastLogic.generateMockEvents(1);
@@ -124,9 +159,11 @@ const AppProvider = ({ children }) => {
     }, 15000);
 
     return () => {
+      unsubNotification();
+      unsubEvent();
       clearInterval(equipmentTimer);
-      clearInterval(transitTimer);
       clearInterval(toastTimer);
+      ws.disconnect();
     };
   }, []);
 
@@ -170,32 +207,70 @@ const AppProvider = ({ children }) => {
       setRefreshInterval: (sec) => dispatch({ type: 'PREFERENCE_SET_REFRESH_INTERVAL', payload: sec }),
       setToastDuration: (ms) => dispatch({ type: 'PREFERENCE_SET_TOAST_DURATION', payload: ms }),
       resetPreferences: () => dispatch({ type: 'PREFERENCE_RESET_DEFAULTS' }),
-      handleSendMessage: (text) => {
+
+      refreshDashboard: async () => {
+        dispatch({ type: 'UI_SET_LOADING', payload: true });
+        try {
+          const data = await api.getDashboard();
+          if (data.services) dispatch({ type: 'EQUIPMENT_LOAD', payload: data.services });
+          if (data.notices) dispatch({ type: 'FAQ_LOAD', payload: data.notices });
+          if (data.cafe) dispatch({ type: 'CAFE_LOAD', payload: data.cafe });
+          if (data.transit) dispatch({ type: 'TRANSIT_LOAD', payload: data.transit });
+          if (data.metrics) dispatch({ type: 'METRICS_LOAD', payload: data.metrics });
+          dispatch({ type: 'UI_SET_LAST_UPDATED', payload: new Date().toISOString() });
+        } catch (err) {
+          dispatch({ type: 'TOAST_ADD', payload: ToastLogic.createToast('error', 'Refresh Failed', err.message) });
+        } finally {
+          dispatch({ type: 'UI_SET_LOADING', payload: false });
+        }
+      },
+
+      updateEquipmentStatus: async (id, newStatus) => {
+        try {
+          await api.updateEquipment(id, { status: newStatus });
+          dispatch({ type: 'TOAST_ADD', payload: ToastLogic.createToast('success', 'Status Updated', `Equipment status changed to ${newStatus}`) });
+          const data = await api.getEquipment();
+          const items = data.equipment || data.items || [];
+          if (items.length) dispatch({ type: 'EQUIPMENT_UPDATE_ALL', payload: items });
+        } catch (err) {
+          dispatch({ type: 'TOAST_ADD', payload: ToastLogic.createToast('error', 'Update Failed', err.message) });
+        }
+      },
+
+      handleSendMessage: async (text) => {
         const trimmed = text.trim();
         if (!trimmed) return;
-        const { chat, data } = stateRef.current;
+        const { chat } = stateRef.current;
         dispatch({ type: 'CHAT_SUBMIT_INPUT', payload: trimmed });
 
-        const nextMessages = [
-          ...chat.messages,
-          { id: `msg-${Date.now()}`, sender: 'user', text: trimmed, timestamp: new Date().toISOString() },
-        ];
-        const response = ChatBotLogic.processQuery(trimmed, data.faq, nextMessages);
-        const delay = ChatBotLogic.simulateTypingDelay(response.text.length);
-
-        setTimeout(() => {
+        try {
+          const result = await api.aiQuery(trimmed);
           dispatch({ type: 'CHAT_SET_TYPING', payload: false });
           dispatch({
             type: 'CHAT_ADD_MESSAGE',
             payload: {
               id: `msg-${Date.now()}`,
               sender: 'ai',
-              text: response.text,
+              text: result.response_text || result.answer || 'I received your question.',
               timestamp: new Date().toISOString(),
             },
           });
-          dispatch({ type: 'CHAT_SET_SUGGESTIONS', payload: response.suggestedQuestions || [] });
-        }, delay);
+        } catch {
+          const nextMessages = [
+            ...chat.messages,
+            { id: `msg-${Date.now()}`, sender: 'user', text: trimmed, timestamp: new Date().toISOString() },
+          ];
+          const response = ChatBotLogic.processQuery(trimmed, stateRef.current.data.faq, nextMessages);
+          const delay = ChatBotLogic.simulateTypingDelay(response.text.length);
+          setTimeout(() => {
+            dispatch({ type: 'CHAT_SET_TYPING', payload: false });
+            dispatch({
+              type: 'CHAT_ADD_MESSAGE',
+              payload: { id: `msg-${Date.now()}`, sender: 'ai', text: response.text, timestamp: new Date().toISOString() },
+            });
+            dispatch({ type: 'CHAT_SET_SUGGESTIONS', payload: response.suggestedQuestions || [] });
+          }, delay);
+        }
       },
     }),
     []
