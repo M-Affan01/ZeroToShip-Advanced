@@ -29,7 +29,6 @@ pgadmin_data/
 redis-data/
 
 # Build outputs
-frontend/dist/
 frontend/build/
 *.egg-info/
 
