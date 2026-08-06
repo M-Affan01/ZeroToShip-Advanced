@@ -39,7 +39,7 @@ export const ChatBotLogic = {
 
     if (bestMatch && bestMatch.confidence > 0.3) {
       return {
-        text: bestMatch.answer,
+        text: bestMatch.answer || bestMatch.content || 'No answer available.',
         confidence: bestMatch.confidence,
         matchedId: bestMatch.id,
         category: bestMatch.category,
@@ -67,15 +67,16 @@ export const ChatBotLogic = {
     const queryLength = queryWords.length;
 
     const scored = faqData.map((faq) => {
-      const keywords = faq.keywords || [];
+      const question = faq.question || faq.title || '';
+      const keywords = faq.keywords || this.extractKeywords(question + ' ' + (faq.answer || faq.content || ''));
       const matchedKeywords = keywords.filter((keyword) => query.includes(keyword));
       const keywordScore = keywords.length > 0 ? matchedKeywords.length / keywords.length : 0;
 
-      const questionWords = this.normalizeText(faq.question).split(' ');
+      const questionWords = this.normalizeText(question).split(' ');
       const commonWords = queryWords.filter((word) => questionWords.includes(word));
       const questionSimilarity = commonWords.length / Math.max(queryLength, questionWords.length, 1);
 
-      const categoryBoost = query.includes(faq.category) ? 0.2 : 0;
+      const categoryBoost = query.includes(faq.category || '') ? 0.2 : 0;
       const confidence = keywordScore * 0.5 + questionSimilarity * 0.3 + categoryBoost;
 
       return { ...faq, confidence: Math.round(confidence * 100) / 100 };
@@ -83,6 +84,11 @@ export const ChatBotLogic = {
 
     const sorted = scored.sort((a, b) => b.confidence - a.confidence);
     return sorted[0] || null;
+  },
+
+  extractKeywords(text) {
+    const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','shall','should','may','might','can','could','i','me','my','we','our','you','your','he','him','his','she','her','it','its','they','them','their','what','which','who','whom','this','that','these','those','and','or','but','if','then','so','for','of','to','in','on','at','by','with','from','as','into','through','during','before','after','above','below','between','out','off','over','under','again','further','then','once','here','there','when','where','why','how','all','each','every','both','few','more','most','other','some','such','no','not','only','own','same','than','too','very','just','about','also']);
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
   },
 
   checkContext(query, history) {
@@ -118,11 +124,11 @@ export const ChatBotLogic = {
     return faqData
       .filter((faq) => faq.category === category && faq.id !== excludeId)
       .slice(0, 3)
-      .map((faq) => faq.question);
+      .map((faq) => faq.question || faq.title);
   },
 
   getPopularQuestions(faqData, count) {
-    return faqData.slice(0, count).map((faq) => faq.question);
+    return faqData.slice(0, count).map((faq) => faq.question || faq.title);
   },
 
   getFallbackResponse() {
@@ -131,10 +137,10 @@ export const ChatBotLogic = {
   },
 
   simulateTypingDelay(textLength) {
-    const baseDelay = 500;
-    const perCharacterDelay = 30;
-    const randomVariation = Math.random() * 200;
-    return Math.min(baseDelay + textLength * perCharacterDelay + randomVariation, 5000);
+    const baseDelay = 300;
+    const perCharacterDelay = 15;
+    const randomVariation = Math.random() * 150;
+    return Math.min(baseDelay + textLength * perCharacterDelay + randomVariation, 3000);
   },
 
   truncateResponse(response, maxLength = 500) {

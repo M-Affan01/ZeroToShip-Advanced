@@ -243,25 +243,42 @@ const AppProvider = ({ children }) => {
         const { chat } = stateRef.current;
         dispatch({ type: 'CHAT_SUBMIT_INPUT', payload: trimmed });
 
+        const token = localStorage.getItem('sentinel_token');
+        if (token) {
+          const aiTimeout = setTimeout(() => {
+            dispatch({ type: 'CHAT_SET_TYPING', payload: false });
+          }, 8000);
+          try {
+            const result = await api.aiQuery(trimmed);
+            clearTimeout(aiTimeout);
+            dispatch({ type: 'CHAT_SET_TYPING', payload: false });
+            dispatch({
+              type: 'CHAT_ADD_MESSAGE',
+              payload: {
+                id: `msg-${Date.now()}`,
+                sender: 'ai',
+                text: result.response_text || result.answer || 'I received your question.',
+                timestamp: new Date().toISOString(),
+              },
+            });
+            return;
+          } catch (err) {
+            clearTimeout(aiTimeout);
+            console.warn('[Chat] AI service failed, using FAQ:', err.message);
+          }
+        }
+
         try {
-          const result = await api.aiQuery(trimmed);
-          dispatch({ type: 'CHAT_SET_TYPING', payload: false });
-          dispatch({
-            type: 'CHAT_ADD_MESSAGE',
-            payload: {
-              id: `msg-${Date.now()}`,
-              sender: 'ai',
-              text: result.response_text || result.answer || 'I received your question.',
-              timestamp: new Date().toISOString(),
-            },
-          });
-        } catch {
           const nextMessages = [
             ...chat.messages,
             { id: `msg-${Date.now()}`, sender: 'user', text: trimmed, timestamp: new Date().toISOString() },
           ];
-          const response = ChatBotLogic.processQuery(trimmed, stateRef.current.data.faq, nextMessages);
-          const delay = ChatBotLogic.simulateTypingDelay(response.text.length);
+          const faqData = stateRef.current.data.faq || [];
+          console.log('[Chat] FAQ count:', faqData.length, 'Query:', trimmed);
+          const response = ChatBotLogic.processQuery(trimmed, faqData, nextMessages);
+          console.log('[Chat] Response:', response.text?.substring(0, 50));
+          const hasFaq = faqData.length > 0;
+          const delay = hasFaq ? ChatBotLogic.simulateTypingDelay(response.text.length) : 100;
           setTimeout(() => {
             dispatch({ type: 'CHAT_SET_TYPING', payload: false });
             dispatch({
@@ -270,6 +287,13 @@ const AppProvider = ({ children }) => {
             });
             dispatch({ type: 'CHAT_SET_SUGGESTIONS', payload: response.suggestedQuestions || [] });
           }, delay);
+        } catch (err) {
+          console.error('[Chat] Error:', err);
+          dispatch({ type: 'CHAT_SET_TYPING', payload: false });
+          dispatch({
+            type: 'CHAT_ADD_MESSAGE',
+            payload: { id: `msg-${Date.now()}`, sender: 'ai', text: "Sorry, something went wrong. Please try again.", timestamp: new Date().toISOString() },
+          });
         }
       },
     }),

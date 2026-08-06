@@ -55,7 +55,7 @@ class ApiService {
   async createNotice(data) { return this.post('/notices', data); }
   async updateNotice(id, data) { return this.patch(`/notices/${id}`, data); }
   async deleteNotice(id) { return this.delete(`/notices/${id}`); }
-  async aiQuery(query, stream = false) { return this.post('/ai/query', { query_text: query, stream }); }
+  async aiQuery(query, stream = false) { return this.post('/ai/query', { query, stream }); }
   async aiFeedback(queryId, rating, feedback) { return this.post('/ai/feedback', { query_id: queryId, rating, feedback }); }
   async getHealth() { return this.get('/health'); }
   async login(email, password) {

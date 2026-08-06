@@ -116,6 +116,7 @@ const ToastIndicator = ({ toast }) => {
 export default function AIAssistant() {
   const {
     state,
+    dispatch,
     setChatInput,
     setChatFocus,
     clearChatHistory,
@@ -142,6 +143,15 @@ export default function AIAssistant() {
     }
   }, [messages.length, chat.isTyping]);
 
+  useEffect(() => {
+    if (chat.isTyping) {
+      const timer = setTimeout(() => {
+        dispatch({ type: 'CHAT_SET_TYPING', payload: false });
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [chat.isTyping, dispatch]);
+
   const demoToast = () => {
     const [event] = ToastLogic.generateMockEvents(1);
     addToast(ToastLogic.createToast(event.type, event.title, event.message));
@@ -149,7 +159,6 @@ export default function AIAssistant() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (chat.isTyping) return;
     if (!validation.isValid) {
       setShowError(true);
       return;
@@ -383,7 +392,7 @@ export default function AIAssistant() {
             type="submit"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
-            disabled={!validation.isValid || chat.isTyping}
+            disabled={!validation.isValid}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-200 transition hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 dark:shadow-glow-dark"
             aria-label="Send message"
           >
